@@ -1,0 +1,202 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Template to create a VPC with NAT in Dev Account.
+Parameters:
+  VPCName:
+    Type: String
+    Default: 'Dev-test-vpc'
+    Description: Please enter your VPC name.
+  Environment:
+    Type: String
+    Default: 'Dev'
+    Description: Please enter your environment.
+  VPCCidrBlock:
+    Type: String
+    Default: '192.168.0.0/16'
+    Description: Please enter your VPC CIDR range.
+  AvailabilityZone1:
+    Type: String
+    Default: ap-south-1a
+    Description: Please enter your availability zone.
+  AvailabilityZone2:
+    Type: String
+    Default: ap-south-1b
+    Description: Please enter your availability zone.
+  PublicSubnet1CIDRBlock:
+    Type: String
+    Default: '192.168.2.0/24'
+    Description: Please enter your public-subnet-1 CidrBlock.
+  PublicSubnet1Name:
+    Type: String
+    Default: 'Dev-test-vpc-PublicSubnet-1'
+    Description: Please enter your public-subnet-1 name.
+  PublicSubnet2CIDRBlock:
+    Type: String
+    Default: '192.168.3.0/24'
+    Description: Please enter your public-subnet-2 CidrBlock.
+  PublicSubnet2Name:
+    Type: String
+    Default: 'Dev-test-vpc-PublicSubnet-2'
+    Description: Please enter your public-subnet-2 name.
+  privateSubnet1CIDRBlock:
+    Type: String
+    Default: '192.168.0.0/24'
+    Description: Please enter your app-subnet-1 CidrBlock.
+  privateSubnet1Name:
+    Type: String
+    Default: 'Dev-test-vpc-privateSubnet-1'
+    Description: Please enter your app-subnet-1 name.
+  privateSubnet2CIDRBlock:
+    Type: String
+    Default: '192.168.1.0/24'
+    Description: Please enter your app-subnet-2 CidrBlock.
+  privateSubnet2Name:
+    Type: String
+    Default: 'Dev-test-vpc-privateSubnet-2'
+    Description: Please enter your app-subnet-2 name.
+  InternetGatewayName:
+    Type: String
+    Default: 'Dev-test-vpc-ig'
+    Description: Please enter your internetgateway name.
+  PublicRouteTableName:
+    Type: String
+    Default: 'Dev-test-vpc-public-route'
+    Description: Please enter your public-route name.
+  PrivateRouteTableName:
+    Type: String
+    Default: 'Dev-test-vpc-private-route'
+    Description: Please enter your private-route name.
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VPCCidrBlock
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Ref VPCName
+        - Key: environment
+          Value: !Ref Environment
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet1CIDRBlock
+      AvailabilityZone: !Ref AvailabilityZone1
+      Tags:
+        - Key: Name
+          Value: !Ref PublicSubnet1Name
+        - Key: environment
+          Value: !Ref Environment
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet2CIDRBlock
+      AvailabilityZone: !Ref AvailabilityZone2
+      Tags:
+        - Key: Name
+          Value: !Ref PublicSubnet2Name
+        - Key: environment
+          Value: !Ref Environment
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref privateSubnet1CIDRBlock
+      AvailabilityZone: !Ref AvailabilityZone1
+      Tags:
+        - Key: Name
+          Value: !Ref privateSubnet1Name
+        - Key: environment
+          Value: !Ref Environment
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref privateSubnet2CIDRBlock
+      AvailabilityZone: !Ref AvailabilityZone2
+      Tags:
+        - Key: Name
+          Value: !Ref privateSubnet2Name
+        - Key: environment
+          Value: !Ref Environment
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref InternetGatewayName
+        - Key: environment
+          Value: !Ref Environment
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  IGAttachtoRT:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref PublicRouteTableName
+        - Key: environment
+          Value: !Ref Environment
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref PrivateRouteTableName
+        - Key: environment
+          Value: !Ref Environment
+  Subnet1Route:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+  Subnet2Route:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+  PublicSubnetRoute1:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+  PublicSubnetRoute2:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+Outputs:
+  VpcId:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCID'
+  PublicSubnet1:
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1'
+  PublicSubnet2:
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2'
+  PrivateSubnet1:
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-Subnet1'
+  PrivateSubnet2:
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-Subnet2'
