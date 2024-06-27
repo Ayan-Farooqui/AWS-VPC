@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess # Replace with a more restrictive policy if needed
+
+  StartEC2Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: StartEC2Function
+      Runtime: python3.8
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+
+          ec2 = boto3.client('ec2')
+
+          def lambda_handler(event, context):
+              # Start the instances with the given instance IDs
+              instance_ids = ['i-0fed37afa80bc67ac', 'i-09bd885e6f5687b96', 'i-017db770fdbc20aa3']
+              ec2.start_instances(InstanceIds=instance_ids)
+
+  StopEC2Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: StopEC2Function
+      Runtime: python3.8
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+
+          ec2 = boto3.client('ec2')
+
+          def lambda_handler(event, context):
+              # Stop the instances with the given instance IDs
+              instance_ids = ['i-0fed37afa80bc67ac', 'i-09bd885e6f5687b96', 'i-017db770fdbc20aa3']
+              ec2.stop_instances(InstanceIds=instance_ids)
+
+  StartInstanceRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: StartInstanceRule
+      ScheduleExpression: "cron(30 1 * * ? *)" # Start at 7:00 AM IST daily
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt StartEC2Function.Arn
+          Id: StartInstanceTarget
+
+  StopInstanceRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: StopInstanceRule
+      ScheduleExpression: "cron(30 16 * * ? *)" # Stop at 10:00 PM IST daily
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt StopEC2Function.Arn
+          Id: StopInstanceTarget
